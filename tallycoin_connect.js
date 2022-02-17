@@ -3,7 +3,7 @@ const LightningClient = require( './lightning-client')
 const client = new LightningClient(process.env.LNDIR, true);
 const WebSocket = require('ws')
 ws = new WebSocket('wss://ws.tallycoin.app:8123/')
-ws.on('open', () => { 
+ws.on('open', () => {
 	let init = { setup }
 	console.log('do we get to open send?', init)
 	ws.send(JSON.stringify(init))
@@ -20,26 +20,28 @@ ws.on('message', d => {
     const msg = JSON.parse(d)
     console.log(msg)
     switch (msg.type){
-        case 'payment_create': 
-            client.invoice(msg.amount * 1000, msg.unique_id,msg.description)
+        case 'payment_create':
+            client.invoice(msg.amount * 1000, msg.unique_id, msg.description)
                 .then(result => {
                     const paymentData = {
                         type: 'payment_data',
                         id: result.payment_hash,
                         payment_request: result.bolt11,
                         api_key: setup,
-                        unique_id:msg.unique_id 
+                        unique_id:msg.unique_id
                     }
                     console.log({paymentData})
                     ws.send(JSON.stringify(paymentData))
                 })
             break
-        case 'payment_verify': 
-            client.listinvoices(msg.inv_id).then(result => {
+        case 'payment_verify':
+						console.log('checking invoice', msg.inv_id)
+            client.listinvoices(null, null, msg.inv_id).then(result => {
+								console.log('got result', result)
                 const verify = {
                     type: 'payment_verify',
-                    id: result.label,
-                    status: result.status,
+                    id: result.invoices[0].label,
+                    status: result.invoices[0].status,
                     amount: parseInt(result.amount_received_msat / 1000),
                     api_key: setup,
                     unique_id: msg.unique_id
